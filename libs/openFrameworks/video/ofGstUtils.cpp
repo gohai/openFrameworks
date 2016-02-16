@@ -1126,6 +1126,13 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 	// g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
 	// gst_object_unref(bus);
 
+	gst_element_set_state (getPipeline(), GST_STATE_PAUSED);
+	GstState state = GST_STATE_PAUSED;
+	if (gst_element_get_state (getPipeline(), &state, NULL,
+		GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS) {
+			ofLogError("ofGstVideoUtils") << "failed to pause pipeline";
+	}
+
 	glXMakeCurrent (ofGetX11Display(), ofGetX11Window(), ofGetGLXContext());
 #elif defined(TARGET_OPENGLES)
 	cout << "current display " << ofGetEGLDisplay() << endl;
@@ -1141,6 +1148,13 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 	// gst_bus_enable_sync_message_emission (bus);
 	// g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
 	// gst_object_unref(bus);
+
+	gst_element_set_state (getPipeline(), GST_STATE_PAUSED);
+	GstState state = GST_STATE_PAUSED;
+	if (gst_element_get_state (getPipeline(), &state, NULL,
+		GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS) {
+			ofLogError("ofGstVideoUtils") << "failed to pause pipeline";
+	}
 
 	eglMakeCurrent (ofGetEGLDisplay(), ofGetEGLSurface(), ofGetEGLSurface(), ofGetEGLContext());
 
