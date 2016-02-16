@@ -1020,40 +1020,39 @@ ofPixelFormat ofGstVideoUtils::getOFFormat(GstVideoFormat format){
 }
 #endif
 
-/*
+#if GST_VERSION_MAJOR > 1 || (GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR >= 6)
 gboolean ofGstVideoUtils::sync_bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
 	switch (GST_MESSAGE_TYPE (msg)) {
 		case GST_MESSAGE_NEED_CONTEXT:
 		{
-			ofGstVideoPlayer * player = (ofGstVideoPlayer*)data;
+			ofGstVideoUtils *utils = (ofGstVideoUtils*)data;
 			const gchar *context_type;
 
 			gst_message_parse_context_type (msg, &context_type);
-			ofLogNotice("ofGstVideoPlayer","got need context %s\n", context_type);
+			ofLogNotice("ofGstVideoUtils", "got need context %s\n", context_type);
 
 			if (g_strcmp0 (context_type, GST_GL_DISPLAY_CONTEXT_TYPE) == 0) {
 				GstContext *display_context =
-				gst_context_new (GST_GL_DISPLAY_CONTEXT_TYPE, TRUE);
-				gst_context_set_gl_display (display_context, player->glDisplay);
-				//GstStructure *s = gst_context_writable_structure (display_context);
-				//gst_structure_set (s, "context", GST_GL_TYPE_CONTEXT, player->glContext,	NULL);
+					gst_context_new (GST_GL_DISPLAY_CONTEXT_TYPE, TRUE);
+				gst_context_set_gl_display (display_context, utils->glDisplay);
 				gst_element_set_context (GST_ELEMENT (msg->src), display_context);
 				return TRUE;
 			} else if (g_strcmp0 (context_type, "gst.gl.app_context") == 0) {
 				GstContext *app_context = gst_context_new ("gst.gl.app_context", TRUE);
 				GstStructure *s = gst_context_writable_structure (app_context);
-				gst_structure_set (s, "context", GST_GL_TYPE_CONTEXT, player->glContext,	NULL);
+				gst_structure_set (s, "context", GST_GL_TYPE_CONTEXT, utils->glContext, NULL);
 				gst_element_set_context (GST_ELEMENT (msg->src), app_context);
 				return TRUE;
 			}
 			break;
 		}
 		default:
-		break;
-	}
+			break;
+		}
 	return FALSE;
-}*/
+}
+#endif
 
 void ofGstVideoUtils::setCopyPixels(bool copy){
 	copyPixels = copy;
@@ -1110,21 +1109,21 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 		ret = false;
 	}
 
-	auto glfilter = gst_bin_get_by_name(GST_BIN(getPipeline()),"gl_filter");
-
 #if defined(TARGET_LINUX) && !defined(TARGET_OPENGLES)
 	glXMakeCurrent (ofGetX11Display(), None, 0);
 	glDisplay = (GstGLDisplay *)gst_gl_display_x11_new_with_display(ofGetX11Display());
 	glContext = gst_gl_context_new_wrapped (glDisplay, (guintptr) ofGetGLXContext(),
 	    		  GST_GL_PLATFORM_GLX, GST_GL_API_OPENGL);
 
+#if GST_VERSION_MAJOR > 1 || (GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR >= 6)
+	GstBus * bus = gst_pipeline_get_bus (GST_PIPELINE(getPipeline()));
+	gst_bus_enable_sync_message_emission (bus);
+	g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
+	gst_object_unref (bus);
+#else
+	auto glfilter = gst_bin_get_by_name(GST_BIN(getPipeline()), "gl_filter");
 	g_object_set (G_OBJECT (glfilter), "other-context", glContext, NULL);
-	// FIXME: this seems to be the way to add the context in 1.4.5
-	//
-	// GstBus * bus = gst_pipeline_get_bus (GST_PIPELINE(gstPipeline));
-	// gst_bus_enable_sync_message_emission (bus);
-	// g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
-	// gst_object_unref(bus);
+#endif
 
 	gst_element_set_state (getPipeline(), GST_STATE_PAUSED);
 	GstState state = GST_STATE_PAUSED;
@@ -1141,13 +1140,15 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 	glContext = gst_gl_context_new_wrapped (glDisplay, (guintptr) ofGetEGLContext(),
 	    		  GST_GL_PLATFORM_EGL, GST_GL_API_GLES2);
 
+#if GST_VERSION_MAJOR > 1 || (GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR >= 6)
+	GstBus * bus = gst_pipeline_get_bus (GST_PIPELINE(getPipeline()));
+	gst_bus_enable_sync_message_emission (bus);
+	g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
+	gst_object_unref (bus);
+#else
+	auto glfilter = gst_bin_get_by_name(GST_BIN(getPipeline()), "gl_filter");
 	g_object_set (G_OBJECT (glfilter), "other-context", glContext, NULL);
-	// FIXME: this seems to be the way to add the context in 1.4.5
-	//
-	// GstBus * bus = gst_pipeline_get_bus (GST_PIPELINE(gstPipeline));
-	// gst_bus_enable_sync_message_emission (bus);
-	// g_signal_connect (bus, "sync-message", G_CALLBACK (sync_bus_call), this);
-	// gst_object_unref(bus);
+#endif
 
 	gst_element_set_state (getPipeline(), GST_STATE_PAUSED);
 	GstState state = GST_STATE_PAUSED;
