@@ -1134,8 +1134,14 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 
 	glXMakeCurrent (ofGetX11Display(), ofGetX11Window(), ofGetGLXContext());
 #elif defined(TARGET_OPENGLES)
-	cout << "current display " << ofGetEGLDisplay() << endl;
+	cout << "current display (EGLDisplay) " << ofGetEGLDisplay() << endl;
+	cout << "default display (define) " << EGL_DEFAULT_DISPLAY << endl;
+	cout << "default display (EGLDisplay) " << eglGetDisplay(EGL_DEFAULT_DISPLAY) << endl;
+
 	eglMakeCurrent (eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+	// XXX: another idea would be to pass ofGetEGLContext to other-context directly
+	// similar to https://cgit.freedesktop.org/gstreamer/gst-plugins-bad/tree/tests/examples/gl/clutter/cluttershare.c?h=1.4
+	// but this doesn't seem to be working either
 	glDisplay = (GstGLDisplay *)gst_gl_display_egl_new_with_egl_display(eglGetDisplay(EGL_DEFAULT_DISPLAY));
 	glContext = gst_gl_context_new_wrapped (glDisplay, (guintptr) ofGetEGLContext(),
 	    		  GST_GL_PLATFORM_EGL, GST_GL_API_GLES2);
@@ -1157,6 +1163,7 @@ bool ofGstVideoUtils::setPipeline(string pipeline, ofPixelFormat pixelFormat, bo
 			ofLogError("ofGstVideoUtils") << "failed to pause pipeline";
 	}
 
+	// XXX: ofGetEGLDisplay() returning 0 on Pi
 	eglMakeCurrent (ofGetEGLDisplay(), ofGetEGLSurface(), ofGetEGLSurface(), ofGetEGLContext());
 
 #endif
