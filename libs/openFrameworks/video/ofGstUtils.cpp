@@ -845,6 +845,10 @@ void ofGstVideoUtils::update(){
 				swap(pixels,backPixels);
 				#ifdef OF_USE_GST_GL
 				if(backTexture.isAllocated()){
+					if (!frontTexture.isAllocated()) {
+						// initialize with dummy ID to silence harmless error
+						frontTexture.setUseExternalTextureID(0);
+					}
 					frontTexture.getTextureData() = backTexture.getTextureData();
 					frontTexture.setTextureMinMagFilter(GL_LINEAR,GL_LINEAR);
 					frontTexture.setTextureWrap(GL_CLAMP_TO_EDGE,GL_CLAMP_TO_EDGE);
